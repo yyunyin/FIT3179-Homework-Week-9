@@ -49,6 +49,12 @@
       height: 600,
       projection: { type: "mercator", center: [115, 9], scale: 800 },
       layer: [
+        /* Ocean background */
+        {
+          data: { sphere: true },
+          mark: { type: "geoshape", fill: "#e6f2ff", stroke: null }
+        },
+
         { 
           data: { graticule: { step: [3, 3] } },
           mark: { type: "geoshape", fill: null, stroke: "#e0e0e0", strokeWidth: 0.6 }
