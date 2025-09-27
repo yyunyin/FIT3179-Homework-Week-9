@@ -11,6 +11,7 @@
       font-size:14px;
       line-height:1.3;
     }
+    /* Keep the PAGE white */
     body { font-family: system-ui, Arial, sans-serif; margin: 0; padding: 24px; background: #fff; }
     .wrap { max-width: 900px; margin: 0 auto; text-align: center; }
     #vis { width: 100%; }
@@ -35,7 +36,7 @@
       <a href="https://www.worldometers.info/world-population/south-eastern-asia-population/" target="_blank" rel="noopener noreferrer">Worldometer</a>
       (population data).
     </p>
-    <div id="vis"></div>
+    <div id="vis" role="img" aria-label="Choropleth map of Japan's matcha exports to ASEAN countries in 2024, normalized per million inhabitants."></div>
   </div>
 
   <script>
@@ -45,33 +46,29 @@
 
     const spec = {
       $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-      width: 800,
+      background: null,                      // <-- canvas is transparent (legend area stays white)
+      width: "container",
       height: 600,
+      autosize: { type: "fit", contains: "padding" },
+      view: { stroke: null },
       projection: { type: "mercator", center: [115, 9], scale: 800 },
       layer: [
-        /* Ocean background */
-        {
-          data: { sphere: true },
-          mark: { type: "geoshape", fill: "#e6f2ff", stroke: null }
-        },
+        /* Ocean background ONLY inside the globe */
+        { data: { sphere: true }, mark: { type: "geoshape", fill: "#e6f2ff", stroke: null } },
 
-        { 
-          data: { graticule: { step: [3, 3] } },
-          mark: { type: "geoshape", fill: null, stroke: "#e0e0e0", strokeWidth: 0.6 }
-        },
+        /* Graticules */
+        { data: { graticule: { step: [3, 3] } },
+          mark: { type: "geoshape", fill: null, stroke: "#cfe0f5", strokeWidth: 0.6 } },
 
-        /* Outline layer — filtered to ASEAN only */
-        { 
-          data: { url: GEO_URL, format: { type: "json", property: "features" } },
+        /* ASEAN outline */
+        { data: { url: GEO_URL, format: { type: "json", property: "features" } },
           transform: [
             { filter: "indexof(['BRN','KHM','IDN','LAO','MYS','MMR','PHL','SGP','THA','VNM','TLS'], datum.properties.iso_a3) >= 0" }
           ],
-          mark: { type: "geoshape", fill: null, stroke: "#bdbdbd", strokeWidth: 0.8 }
-        },
+          mark: { type: "geoshape", fill: null, stroke: "#bdbdbd", strokeWidth: 0.8 } },
 
         /* Choropleth (per-capita) — sequential palette (Viridis), 0→200k */
-        { 
-          data: { url: GEO_URL, format: { type: "json", property: "features" } },
+        { data: { url: GEO_URL, format: { type: "json", property: "features" } },
           transform: [
             { filter: "indexof(['BRN','KHM','IDN','LAO','MYS','MMR','PHL','SGP','THA','VNM','TLS'], datum.properties.iso_a3) >= 0" },
             { lookup: "properties.iso_a3", from: { data: { url: CSV_URL }, key: "iso3", fields: ["country", "export_value"] } },
@@ -83,12 +80,7 @@
             color: {
               field: "exports_per_million",
               type: "quantitative",
-              // Sequential, perceptually-uniform palette; boost low–mid with pow curve
-              scale: {
-                type: "pow", exponent: 0.5, clamp: true,
-                domain: [0, 200000],
-                scheme: "viridis"   // try "cividis" or "blues" if you prefer
-              },
+              scale: { type: "pow", exponent: 0.5, clamp: true, domain: [0, 200000], scheme: "viridis" },
               legend: {
                 orient: "bottom",
                 direction: "horizontal",
@@ -96,13 +88,14 @@
                 format: "~s",
                 gradientLength: 560,
                 gradientThickness: 16,
-                values: [0, 50_000, 100_000, 150_000, 200_000]
+                values: [0, 50000, 100000, 150000, 200000]
+                /* no fillColor: legend inherits white from the page */
               }
             },
             tooltip: [
               { field: "properties.name", title: "Country" },
-              { field: "export_value", title: "Value of matcha export from Japan (US$)", format: ",.0f" },
-              { field: "exports_per_million", title: "Value of matcha export per 1M people (US$)", format: ",.0f" }
+              { field: "export_value", title: "Export value (US$)", format: ",.0f" },
+              { field: "exports_per_million", title: "Per 1M people (US$)", format: ",.0f" }
             ]
           }
         }
